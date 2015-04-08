@@ -6,8 +6,35 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"github.com/robertkrimen/otto"
+	"net/http"
 	"regexp"
 )
+
+const CrossDomain = `<?xml version="1.0"?>
+<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
+<cross-domain-policy>
+<allow-access-from domain="*" />
+</cross-domain-policy>
+`
+
+func HttpAction(success func([]string), failure func(string, error)) func(*http.Request) (int, string) {
+	return func(r *http.Request) (int, string) {
+		jk := r.FormValue("jk")
+		pw := r.FormValue("pw")
+		crypted := r.FormValue("crypted")
+		links, text, err := Decrypt(jk, pw, crypted)
+		if err != nil {
+			if failure != nil {
+				failure(text, err)
+			}
+			return http.StatusBadRequest, text
+		}
+		if success != nil {
+			success(links)
+		}
+		return http.StatusOK, "success\r\n"
+	}
+}
 
 // pw is not considered
 // Returns:
