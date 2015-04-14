@@ -17,22 +17,23 @@ const CrossDomain = `<?xml version="1.0"?>
 </cross-domain-policy>
 `
 
-func HttpAction(success func([]string), failure func(string, error)) func(*http.Request) (int, string) {
-	return func(r *http.Request) (int, string) {
+func HttpAction(successcb func([]string), errorcb func(string, error)) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		jk := r.FormValue("jk")
 		pw := r.FormValue("pw")
 		crypted := r.FormValue("crypted")
 		links, text, err := Decrypt(jk, pw, crypted)
 		if err != nil {
-			if failure != nil {
-				failure(text, err)
+			if errorcb != nil {
+				errorcb(text, err)
 			}
-			return http.StatusBadRequest, text
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte(text))
 		}
-		if success != nil {
-			success(links)
+		if successcb != nil {
+			successcb(links)
 		}
-		return http.StatusOK, "success\r\n"
+		rw.Write([]byte("success\r\n"))
 	}
 }
 
